@@ -14,4 +14,10 @@ class MethodChannelPipSupportWebrtc extends PipSupportWebrtcPlatform {
     final version = await methodChannel.invokeMethod<String>('getPlatformVersion');
     return version;
   }
+
+  @override
+  Future<bool> isPictureInPictureSupported() async {
+    final isSupported = await methodChannel.invokeMethod<bool>('isPictureInPictureSupported');
+    return isSupported??false;
+  }
 }

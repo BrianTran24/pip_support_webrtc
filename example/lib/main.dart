@@ -1,63 +1,141 @@
-import 'package:flutter/material.dart';
-import 'dart:async';
+import 'dart:core';
 
-import 'package:flutter/services.dart';
-import 'package:pip_support_webrtc/pip_support_webrtc.dart';
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
+import 'package:flutter/material.dart';
+import 'package:flutter_background/flutter_background.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:pip_support_webrtc_example/src/capture_frame_sample.dart';
+
+
+import 'src/device_enumeration_sample.dart';
+import 'src/get_display_media_sample.dart';
+import 'src/get_user_media_sample.dart'
+    if (dart.library.html) 'src/get_user_media_sample_web.dart';
+import 'src/loopback_data_channel_sample.dart';
+import 'src/loopback_sample_unified_tracks.dart';
+import 'src/route_item.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  if (WebRTC.platformIsDesktop) {
+    debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
+  } else if (WebRTC.platformIsAndroid) {
+    //startForegroundService();
+  }
+  runApp(MyApp());
+}
+
+Future<bool> startForegroundService() async {
+  final androidConfig = FlutterBackgroundAndroidConfig(
+    notificationTitle: 'Title of the notification',
+    notificationText: 'Text of the notification',
+    notificationImportance: AndroidNotificationImportance.normal,
+    notificationIcon: AndroidResource(
+        name: 'background_icon',
+        defType: 'drawable'), // Default is ic_launcher from folder mipmap
+  );
+  await FlutterBackground.initialize(androidConfig: androidConfig);
+  return FlutterBackground.enableBackgroundExecution();
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
-
   @override
-  State<MyApp> createState() => _MyAppState();
+  _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
-  final _pipSupportWebrtcPlugin = PipSupportWebrtc();
+  late List<RouteItem> items;
 
   @override
   void initState() {
     super.initState();
-    initPlatformState();
+    _initItems();
   }
 
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
-    try {
-      platformVersion =
-          await _pipSupportWebrtcPlugin.getPlatformVersion() ?? 'Unknown platform version';
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
-    });
+  ListBody _buildRow(context, item) {
+    return ListBody(children: <Widget>[
+      ListTile(
+        title: Text(item.title),
+        onTap: () => item.push(context),
+        trailing: Icon(Icons.arrow_right),
+      ),
+      Divider()
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example app'),
-        ),
-        body: Center(
-          child: Text('Running on: $_platformVersion\n'),
-        ),
-      ),
+          appBar: AppBar(
+            title: Text('Flutter-WebRTC example'),
+          ),
+          body: ListView.builder(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(0.0),
+              itemCount: items.length,
+              itemBuilder: (context, i) {
+                return _buildRow(context, items[i]);
+              })),
     );
+  }
+
+  void _initItems() {
+    items = <RouteItem>[
+      RouteItem(
+          title: 'GetUserMedia',
+          push: (BuildContext context) {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (BuildContext context) => GetUserMediaSample()));
+          }),
+      RouteItem(
+          title: 'Device Enumeration',
+          push: (BuildContext context) {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (BuildContext context) =>
+                        DeviceEnumerationSample()));
+          }),
+      RouteItem(
+          title: 'GetDisplayMedia',
+          push: (BuildContext context) {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (BuildContext context) =>
+                        GetDisplayMediaSample()));
+          }),
+      RouteItem(
+          title: 'LoopBack Sample (Unified Tracks)',
+          push: (BuildContext context) {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (BuildContext context) =>
+                        LoopBackSampleUnifiedTracks()));
+          }),
+      RouteItem(
+          title: 'DataChannelLoopBackSample',
+          push: (BuildContext context) {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (BuildContext context) =>
+                        DataChannelLoopBackSample()));
+          }),
+      RouteItem(
+          title: 'Capture Frame',
+          push: (BuildContext context) {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (BuildContext context) => CaptureFrameSample()));
+          }),
+    ];
   }
 }
